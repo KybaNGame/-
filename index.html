@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Прикольчик</title>
+    
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .sections { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+        .section { border: 3px solid #ffffff; padding: 10px; text-align: center; cursor: pointer; }
+        .gallery { display: flex; flex-direction: column; gap: 20px; }
+        .post { border: 1px solid #eee; padding: 15px; border-radius: 8px; position: relative; }
+        .post img { max-width: 100%; height: auto; max-height: 500px; object-fit: contain; }
+        .auth-form { margin: 20px 0; }
+        .hidden { display: none; }
+        .delete-btn { background: red; color: white; border: none; padding: 5px 10px; cursor: pointer; position: absolute; top: 10px; right: 10px; }
+        .description { color: #666; margin: 10px 0; }
+        .post-info { color: #999; font-size: 0.9em; }
+        #charCounter { font-size: 0.8em; color: #999; }
+        #timeoutMessage { margin: 10px 0; padding: 10px; background: #fff3cd; border-radius: 5px; }
+        .timer { color: red; }
+        #uploadButton:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body style=background-color:#7df72590;>
+    <!-- Панель админа -->
+    <div style="margin: 10px 0;">
+<h2>ХихихиХа-604</h2><br>
+        ВНИМАНИЕ САЙТ РАБОТАЕТ С ЗАДЕРЖКОЙ если не нравится можете здесь написать 
+        <a href="https://i.ytimg.com/vi/7w5MSpeTk0E/hqdefault.jpg?sqp=-oaymwEmCOADEOgC8quKqQMa8AEB-AHgA4AC4AOKAgwIABABGC8gYihyMA8=&amp;rs=AOn4CLCcy5xQHu6s5wbr5cceD_aIif72-A">отзыв</a>
+        
+        <a href="https://uwupad.me/playlist/265" title="тянкаа" style="float: right; margin: 10px;">
+            <img src="Anime-Fubuki-(Kantai-Collection)-Kantai-Collection-oweee-5168201.png" 
+                 alt="Ошибка" 
+                 width="20%" />
+        
+
+          </a><br> Также не забудьте никнейм и пароль!<br><br>
+        <button onclick="showAdminLogin()">Войти как админ</button>
+    </div>
+    <div id="adminLogin" class="hidden">
+        <input type="password" id="adminCode" placeholder="Админ-код">
+        <button onclick="loginAsAdmin()">Подтвердить</button>
+    </div>
+
+    <!-- Форма регистрации/входа -->
+    <div id="auth" class="auth-form">
+        <input type="text" id="username" placeholder="Никнейм">
+        <input type="password" id="password" placeholder="Пароль">
+        <button onclick="register()">Регистрация</button>
+        <button onclick="login()">Войти</button>
+    </div>
+
+    <!-- Форма загрузки -->
+    <div id="uploadForm" class="hidden">
+        <div id="timeoutMessage" class="hidden">Следующая загрузка возможна через: <span id="timer">60</span> сек.</div>
+        <input type="file" id="imageInput" accept="image/*">
+        <select id="sectionSelect">
+            <option value="chemistry">Химия</option>
+            <option value="russian">Русский язык</option>
+            <option value="math">Алгебра/Геометрия</option>
+            <option value="physics">Физика</option>
+            <option value="history">История</option>
+            <option value="social">Обществознание</option>
+            <option value="it">Информатика</option>
+            <option value="biology">Биология</option>
+            <option value="geography">География</option>
+            <option value="literature">Литература</option>
+        </select>
+        <input type="text" id="description" 
+               placeholder="Описание (макс. 80 символов)" 
+               maxlength="80">
+        <div id="charCounter">Осталось символов: 80</div>
+        <button id="uploadButton" onclick="uploadPhoto()">Загрузить</button>
+    </div>
+
+    <!-- Список разделов -->
+    <div class="sections">
+        <div class="section" onclick="showSection('chemistry')">Химия</div>
+        <div class="section" onclick="showSection('russian')">Русский язык</div>
+        <div class="section" onclick="showSection('math')">Алгебра/Геометрия</div>
+        <div class="section" onclick="showSection('physics')">Физика</div>
+        <div class="section" onclick="showSection('history')">История</div>
+        <div class="section" onclick="showSection('social')">Обществознание</div>
+        <div class="section" onclick="showSection('it')">Информатика</div>
+        <div class="section" onclick="showSection('biology')">Биология</div>
+        <div class="section" onclick="showSection('geography')">География</div>
+        <div class="section" onclick="showSection('literature')">Литература</div>
+    </div>
+
+    <!-- Галерея -->
+    <div id="gallery" class="gallery"></div>
+
+    <script>
+        // Хранилище данных
+        let users = JSON.parse(localStorage.getItem('users') || '[]');
+        let posts = JSON.parse(localStorage.getItem('posts') || '[]');
+        let currentUser = null;
+        let isAdmin = false;
+        const ADMIN_SECRET_CODE = "AdminAccess123";
+        let lastUploadTime = Number(localStorage.getItem('lastUploadTime')) || 0;
+        let timerInterval;
+
+        // Форматирование даты
+        function formatDate(dateString) {
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            return new Date(dateString).toLocaleString('ru-RU', options);
+        }
+
+        // Счетчик символов
+        document.getElementById('description').addEventListener('input', function(e) {
+            const remaining = 80 - e.target.value.length;
+            document.getElementById('charCounter').textContent = 
+                `Осталось символов: ${remaining}`;
+            document.getElementById('charCounter').style.color = 
+                remaining < 10 ? '#ff0000' : '#999';
+        });
+
+        // Регистрация
+        function register() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!username || !password) {
+                alert('Введите логин и пароль!');
+                return;
+            }
+            
+            if (users.some(u => u.username === username)) {
+                alert('Никнейм занят!');
+                return;
+            }
+            
+            users.push({ username, password });
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Регистрация успешна!');
+        }
+
+        // Авторизация
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            const user = users.find(u => u.username === username && u.password === password);
+            if (!user) {
+                alert('Ошибка входа!');
+                return;
+            }
+            
+            currentUser = user;
+            document.getElementById('auth').classList.add('hidden');
+            document.getElementById('uploadForm').classList.remove('hidden');
+        }
+
+        // Таймер обратного отсчета
+        function startTimer(seconds) {
+            const uploadButton = document.getElementById('uploadButton');
+            let timeLeft = seconds;
+            uploadButton.disabled = true;
+            document.getElementById('timeoutMessage').classList.remove('hidden');
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    uploadButton.disabled = false;
+                    document.getElementById('timeoutMessage').classList.add('hidden');
+                }
+            }, 1000);
+        }
+
+        // Загрузка фото
+        function uploadPhoto() {
+            const now = Date.now();
+            const timeLeft = 60000 - (now - lastUploadTime);
+
+            if (timeLeft > 0) {
+                alert(`Подождите ещё ${Math.ceil(timeLeft/1000)} секунд`);
+                return;
+            }
+
+            const file = document.getElementById('imageInput').files[0];
+            const section = document.getElementById('sectionSelect').value;
+            const description = document.getElementById('description').value.trim();
+            
+            if (!file) {
+                alert('Выберите фото!');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                posts.unshift({
+                    section,
+                    image: e.target.result,
+                    author: currentUser.username,
+                    description: description.substring(0, 80),
+                    date: new Date().toISOString()
+                });
+                localStorage.setItem('posts', JSON.stringify(posts));
+                document.getElementById('description').value = '';
+                lastUploadTime = Date.now();
+                localStorage.setItem('lastUploadTime', lastUploadTime);
+                updateGallery(section);
+                startTimer(60);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Отображение раздела
+        function showSection(section) {
+            const sectionPosts = posts.filter(p => p.section === section);
+            const gallery = document.getElementById('gallery');
+            
+            gallery.innerHTML = sectionPosts.map((post, index) => `
+                <div class="post">
+                    ${isAdmin ? `<button class="delete-btn" onclick="deletePost(${index})">X</button>` : ''}
+                    <img src="${post.image}">
+                    <div class="post-info">
+                        <div>Автор: ${post.author}</div>
+                        <div>${formatDate(post.date)}</div>
+                    </div>
+                    ${post.description ? `<div class="description">${post.description}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Функции админа
+        function showAdminLogin() {
+            document.getElementById('adminLogin').classList.remove('hidden');
+        }
+
+        function loginAsAdmin() {
+            const code = document.getElementById('adminCode').value;
+            if(code === ADMIN_SECRET_CODE) {
+                isAdmin = true;
+                alert('Господин, доступ активирован!');
+                refreshGallery();
+            } else {
+                alert('Пшел нах, хyли xерней страдаешь?');
+            }
+        }
+
+        function deletePost(index) {
+            if(!isAdmin) return;
+            if(confirm("Хозяин, вы уверены, что хотите удалить этот пост?")) {
+                posts.splice(index, 1);
+                localStorage.setItem('posts', JSON.stringify(posts));
+                refreshGallery();
+            }
+        }
+
+        function refreshGallery() {
+            const currentSection = document.querySelector('.section.active')?.getAttribute('data-section');
+            if(currentSection) showSection(currentSection);
+        }
+
+        function updateGallery(section) {
+            showSection(section);
+        }
+
+        // Инициализация при загрузке
+        window.onload = () => {
+            const now = Date.now();
+            const timePassed = now - lastUploadTime;
+            
+            if(timePassed < 60000) {
+                const remainingTime = 60 - Math.floor(timePassed/1000);
+                startTimer(remainingTime);
+            }
+            
+            if(posts.length > 0) showSection(posts[0].section);
+        }
+    </script>
+</body>
+</html>
