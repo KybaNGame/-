@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фото-сайт</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            line-height: 1.6;
+        }
+        .admin-notice { 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: #fff3cd; 
+            border-radius: 5px;
+        }
+        .sections { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 10px; 
+            margin-bottom: 20px; 
+        }
+        .section { 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: transform 0.2s;
+        }
+        .section:hover {
+            transform: scale(1.05);
+        }
+        .gallery { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+        }
+        .post { 
+            border: 1px solid #eee; 
+            padding: 15px; 
+            border-radius: 8px; 
+            position: relative; 
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .post img { 
+            max-width: 100%; 
+            height: auto; 
+            max-height: 500px; 
+            object-fit: contain; 
+            border-radius: 4px;
+        }
+        .auth-form { 
+            margin: 20px 0; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 300px;
+        }
+        .hidden { 
+            display: none; 
+        }
+        .delete-btn { 
+            background: #ff4444; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            cursor: pointer; 
+            position: absolute; 
+            top: 10px; 
+            right: 10px; 
+            border-radius: 3px;
+        }
+        .description { 
+            color: #666; 
+            margin: 10px 0; 
+            font-size: 0.95em;
+        }
+        .post-info { 
+            color: #999; 
+            font-size: 0.85em; 
+            margin-top: 8px;
+        }
+        #charCounter { 
+            font-size: 0.8em; 
+            color: #999; 
+        }
+        #timeoutMessage { 
+            margin: 10px 0; 
+            padding: 10px; 
+            background: #e9f5ff; 
+            border-radius: 5px; 
+            color: #31708f;
+        }
+        .timer { 
+            color: #d9534f; 
+            font-weight: bold;
+        }
+        #uploadButton:disabled { 
+            background: #e0e0e0; 
+            cursor: not-allowed; 
+        }
+        input, select, button {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-notice">
+        <p>Сайт находится в тестовом режиме. Оставьте <a href="/feedback">обратную связь</a></p>
+        <button onclick="showAdminLogin()">Войти как администратор</button>
+    </div>
+
+    <div id="adminLogin" class="hidden">
+        <input type="password" id="adminCode" placeholder="Введите админ-код">
+        <button onclick="loginAsAdmin()">Подтвердить</button>
+    </div>
+
+    <div id="auth" class="auth-form">
+        <input type="text" id="username" placeholder="Придумайте никнейм">
+        <input type="password" id="password" placeholder="Создайте пароль">
+        <button onclick="register()">Зарегистрироваться</button>
+        <button onclick="login()">Войти в аккаунт</button>
+    </div>
+
+    <div id="uploadForm" class="hidden">
+        <div id="timeoutMessage" class="hidden">
+            Следующая загрузка через: <span id="timer">60</span> сек.
+        </div>
+        <input type="file" id="imageInput" accept="image/*">
+        <select id="sectionSelect">
+            <option value="chemistry">Химия</option>
+            <option value="russian">Русский язык</option>
+            <option value="math">Алгебра/Геометрия</option>
+            <option value="physics">Физика</option>
+            <option value="history">История</option>
+            <option value="social">Обществознание</option>
+            <option value="it">Информатика</option>
+            <option value="biology">Биология</option>
+            <option value="geography">География</option>
+            <option value="literature">Литература</option>
+        </select>
+        <input type="text" id="description" 
+               placeholder="Описание (до 80 символов)" 
+               maxlength="80">
+        <div id="charCounter">Осталось символов: 80</div>
+        <button id="uploadButton" onclick="uploadPhoto()">Опубликовать</button>
+    </div>
+
+    <div class="sections">
+        <div class="section" onclick="showSection('chemistry')">Химия</div>
+        <div class="section" onclick="showSection('russian')">Русский язык</div>
+        <div class="section" onclick="showSection('math')">Математика</div>
+        <div class="section" onclick="showSection('physics')">Физика</div>
+        <div class="section" onclick="showSection('history')">История</div>
+        <div class="section" onclick="showSection('social')">Обществознание</div>
+        <div class="section" onclick="showSection('it')">Информатика</div>
+        <div class="section" onclick="showSection('biology')">Биология</div>
+        <div class="section" onclick="showSection('geography')">География</div>
+        <div class="section" onclick="showSection('literature')">Литература</div>
+    </div>
+
+    <div id="gallery" class="gallery"></div>
+
+    <script>
+        const ADMIN_SECRET_CODE = "SecureAdmin123!";
+        let users = JSON.parse(localStorage.getItem('users') || [];
+        let posts = JSON.parse(localStorage.getItem('posts') || [];
+        let currentUser = null;
+        let isAdmin = false;
+        let lastUploadTime = Number(localStorage.getItem('lastUploadTime')) || 0;
+        let timerInterval;
+
+        function formatDate(dateString) {
+            const options = { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit'
+            };
+            return new Date(dateString).toLocaleString('ru-RU', options);
+        }
+
+        document.getElementById('description').addEventListener('input', function(e) {
+            const remaining = 80 - e.target.value.length;
+            document.getElementById('charCounter').textContent = 
+                `Осталось символов: ${remaining}`;
+            document.getElementById('charCounter').style.color = 
+                remaining < 10 ? '#d9534f' : '#999';
+        });
+
+        function register() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!username || !password) {
+                alert('Заполните все поля!');
+                return;
+            }
+            
+            if (users.some(u => u.username === username)) {
+                alert('Этот никнейм уже занят!');
+                return;
+            }
+            
+            users.push({ username, password });
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Регистрация прошла успешно!');
+            document.getElementById('auth').reset();
+        }
+
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            const user = users.find(u => u.username === username && u.password === password);
+            if (!user) {
+                alert('Неверные данные для входа!');
+                return;
+            }
+            
+            currentUser = user;
+            document.getElementById('auth').classList.add('hidden');
+            document.getElementById('uploadForm').classList.remove('hidden');
+        }
+
+        function startTimer(seconds) {
+            const uploadButton = document.getElementById('uploadButton');
+            let timeLeft = seconds;
+            uploadButton.disabled = true;
+            document.getElementById('timeoutMessage').classList.remove('hidden');
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    uploadButton.disabled = false;
+                    document.getElementById('timeoutMessage').classList.add('hidden');
+                }
+            }, 1000);
+        }
+
+        function uploadPhoto() {
+            const now = Date.now();
+            const timeLeft = 60000 - (now - lastUploadTime);
+
+            if (timeLeft > 0) {
+                alert(`Пожалуйста, подождите ${Math.ceil(timeLeft/1000)} секунд`);
+                return;
+            }
+
+            const file = document.getElementById('imageInput').files[0];
+            const section = document.getElementById('sectionSelect').value;
+            const description = document.getElementById('description').value.trim();
+            
+            if (!file) {
+                alert('Выберите изображение!');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                posts.unshift({
+                    section,
+                    image: e.target.result,
+                    author: currentUser.username,
+                    description: description.substring(0, 80),
+                    date: new Date().toISOString(),
+                    likes: []
+                });
+                
+                localStorage.setItem('posts', JSON.stringify(posts));
+                document.getElementById('description').value = '';
+                lastUploadTime = Date.now();
+                localStorage.setItem('lastUploadTime', lastUploadTime);
+                updateGallery(section);
+                startTimer(60);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showSection(section) {
+            const sectionPosts = posts.filter(p => p.section === section);
+            const gallery = document.getElementById('gallery');
+            
+            gallery.innerHTML = sectionPosts.map((post, index) => `
+                <div class="post">
+                    ${isAdmin ? `<button class="delete-btn" onclick="deletePost(${index})">×</button>` : ''}
+                    <img src="${post.image}" alt="Загруженное изображение">
+                    <div class="post-info">
+                        <div>Автор: ${post.author}</div>
+                        <div>${formatDate(post.date)}</div>
+                    </div>
+                    ${post.description ? `<div class="description">${post.description}</div>` : ''}
+                    <div class="like-section">
+                        <button class="like-btn ${post.likes.includes(currentUser?.username) ? 'liked' : ''}" 
+                                onclick="toggleLike(${index})">♥</button>
+                        <span class="like-count">${post.likes.length}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleLike(postIndex) {
+            if (!currentUser) {
+                alert('Для оценки необходимо авторизоваться!');
+                return;
+            }
+            
+            const post = posts[postIndex];
+            const userIndex = post.likes.indexOf(currentUser.username);
+            
+            if (userIndex === -1) {
+                post.likes.push(currentUser.username);
+            } else {
+                post.likes.splice(userIndex, 1);
+            }
+            
+            localStorage.setItem('posts', JSON.stringify(posts));
+            updateGallery(post.section);
+        }
+
+        function showAdminLogin() {
+            document.getElementById('adminLogin').classList.remove('hidden');
+        }
+
+        function loginAsAdmin() {
+            const code = document.getElementById('adminCode').value;
+            if(code === ADMIN_SECRET_CODE) {
+                isAdmin = true;
+                alert('Режим администратора активирован!');
+                refreshGallery();
+            } else {
+                alert('Неверный код доступа!');
+            }
+        }
+
+        function deletePost(index) {
+            if(!isAdmin) return;
+            if(confirm("Вы уверены, что хотите удалить этот пост?")) {
+                posts.splice(index, 1);
+                localStorage.setItem('posts', JSON.stringify(posts));
+                refreshGallery();
+            }
+        }
+
+        function refreshGallery() {
+            const currentSection = document.querySelector('.section.active')?.getAttribute('data-section');
+            if(currentSection) showSection(currentSection);
+        }
+
+        function updateGallery(section) {
+            showSection(section);
+        }
+
+        window.onload = () => {
+            const now = Date.now();
+            const timePassed = now - lastUploadTime;
+            
+            if(timePassed < 60000) {
+                const remainingTime = 60 - Math.floor(timePassed/1000);
+                startTimer(remainingTime);
+            }
+            
+            if(posts.length > 0) showSection(posts[0].section);
+        }
+    </script>
+</body>
+</html>
