@@ -22,9 +22,10 @@
 </head>
 <body>
     <!-- Панель админа -->
-     ВНИМАНИЕ САЙТ РАБОТАЕТ С ЗАДЕРЖКОЙ если не нравится можете здесь написать <a href="https://i.ytimg.com/vi/7w5MSpeTk0E/hqdefault.jpg?sqp=-oaymwEmCOADEOgC8quKqQMa8AEB-AHgA4AC4AOKAgwIABABGC8gYihyMA8=&amp;rs=AOn4CLCcy5xQHu6s5wbr5cceD_aIif72-A">отзыв</a>
-     <br> <br> <br> 
     <div style="margin: 10px 0;">
+        ВНИМАНИЕ САЙТ РАБОТАЕТ С ЗАДЕРЖКОЙ если не нравится можете здесь написать 
+        <a href="https://i.ytimg.com/vi/7w5MSpeTk0E/hqdefault.jpg?sqp=-oaymwEmCOADEOgC8quKqQMa8AEB-AHgA4AC4AOKAgwIABABGC8gYihyMA8=&amp;rs=AOn4CLCcy5xQHu6s5wbr5cceD_aIif72-A">отзыв</a>
+        <br><br><br>
         <button onclick="showAdminLogin()">Войти как админ</button>
     </div>
     <div id="adminLogin" class="hidden">
@@ -86,7 +87,7 @@
         let posts = JSON.parse(localStorage.getItem('posts') || '[]');
         let currentUser = null;
         let isAdmin = false;
-        const ADMIN_SECRET_CODE = "ктозайдеткромеадминатотпидр";
+        const ADMIN_SECRET_CODE = "AdminAccess123";
         let lastUploadTime = Number(localStorage.getItem('lastUploadTime')) || 0;
         let timerInterval;
 
@@ -114,8 +115,13 @@
 
         // Регистрация
         function register() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!username || !password) {
+                alert('Введите логин и пароль!');
+                return;
+            }
             
             if (users.some(u => u.username === username)) {
                 alert('Никнейм занят!');
@@ -129,8 +135,8 @@
 
         // Авторизация
         function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
             
             const user = users.find(u => u.username === username && u.password === password);
             if (!user) {
@@ -175,7 +181,7 @@
 
             const file = document.getElementById('imageInput').files[0];
             const section = document.getElementById('sectionSelect').value;
-            const description = document.getElementById('description').value;
+            const description = document.getElementById('description').value.trim();
             
             if (!file) {
                 alert('Выберите фото!');
@@ -228,16 +234,16 @@
             const code = document.getElementById('adminCode').value;
             if(code === ADMIN_SECRET_CODE) {
                 isAdmin = true;
-                alert('Господин, доступ активирован!');
+                alert('Админ-доступ активирован!');
                 refreshGallery();
             } else {
-                alert('АХАХХАХА');
+                alert('Неверный код доступа!');
             }
         }
 
         function deletePost(index) {
             if(!isAdmin) return;
-            if(confirm("Удалить этот пост? Мой сэр!")) {
+            if(confirm("Вы уверены, что хотите удалить этот пост?")) {
                 posts.splice(index, 1);
                 localStorage.setItem('posts', JSON.stringify(posts));
                 refreshGallery();
